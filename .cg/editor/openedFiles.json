@@ -4,14 +4,14 @@
       "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/settings.gradle",
       "selection": {
         "end": {
-          "column": 15,
-          "index": 335,
-          "line": 17
+          "column": 0,
+          "index": 277,
+          "line": 4
         },
         "start": {
-          "column": 15,
-          "index": 335,
-          "line": 17
+          "column": 0,
+          "index": 277,
+          "line": 4
         }
       }
     },
@@ -19,14 +19,14 @@
       "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/build.gradle",
       "selection": {
         "end": {
-          "column": 46,
-          "index": 56,
-          "line": 1
+          "column": 0,
+          "index": 140,
+          "line": 4
         },
         "start": {
-          "column": 46,
-          "index": 56,
-          "line": 1
+          "column": 0,
+          "index": 140,
+          "line": 4
         }
       }
     },
@@ -35,13 +35,28 @@
       "selection": {
         "end": {
           "column": 75,
-          "index": 211,
+          "index": 213,
           "line": 4
         },
         "start": {
           "column": 75,
-          "index": 211,
+          "index": 213,
           "line": 4
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/build.gradle",
+      "selection": {
+        "end": {
+          "column": 1,
+          "index": 1035,
+          "line": 32
+        },
+        "start": {
+          "column": 1,
+          "index": 1035,
+          "line": 32
         }
       }
     },
@@ -50,13 +65,13 @@
       "selection": {
         "end": {
           "column": 11,
-          "index": 1337,
-          "line": 33
+          "index": 1514,
+          "line": 35
         },
         "start": {
           "column": 11,
-          "index": 1337,
-          "line": 33
+          "index": 1514,
+          "line": 35
         }
       }
     },
@@ -107,5 +122,5 @@
     }
   ],
   "projectPath": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator",
-  "selectedFile": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/build.gradle.kts"
+  "selectedFile": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/AndroidManifest.xml"
 }
