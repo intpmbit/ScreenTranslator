@@ -64,17 +64,19 @@ class MainFragment : Fragment() {
         chips["zh"] = view.findViewById(R.id.chipZh)
         chips.forEach { (code, chip) ->
             chip.setOnClickListener {
-                Prefs.get(requireContext()).edit().putString(Prefs.KEY_SRC, code).apply()
+                val ctx = activity ?: return@setOnClickListener
+                Prefs.get(ctx).edit().putString(Prefs.KEY_SRC, code).apply()
                 updateChips()
             }
         }
 
         view.findViewById<View>(R.id.rowPermission).setOnClickListener {
-            (activity as MainActivity).openOverlaySettings()
+            (activity as? MainActivity)?.openOverlaySettings()
         }
-        btnStart.setOnClickListener { (activity as MainActivity).requestStart() }
+        btnStart.setOnClickListener { (activity as? MainActivity)?.requestStart() }
         btnStop.setOnClickListener {
-            requireContext().stopService(Intent(requireContext(), FloatingService::class.java))
+            val ctx = activity ?: return@setOnClickListener
+            ctx.stopService(Intent(ctx, FloatingService::class.java))
             handler.postDelayed({ if (isAdded) refresh() }, 300)
         }
         updateChips()
@@ -93,7 +95,7 @@ class MainFragment : Fragment() {
 
     private fun refresh() {
         if (!isAdded) return
-        val ctx = requireContext()
+        val ctx = activity ?: return
         val perm = Settings.canDrawOverlays(ctx)
         val running = FloatingService.isRunning
 
@@ -134,7 +136,8 @@ class MainFragment : Fragment() {
     private fun applyState(
         bg: Int, colorRes: Int, title: String, sub: String, icon: Int, animate: Boolean
     ) {
-        val color = requireContext().getColor(colorRes)
+        val ctx = activity ?: return
+        val color = ctx.getColor(colorRes)
         statusCard.setBackgroundResource(bg)
         dotCore.backgroundTintList = ColorStateList.valueOf(color)
         dotHalo.backgroundTintList = ColorStateList.valueOf(color)
@@ -167,7 +170,7 @@ class MainFragment : Fragment() {
     }
 
     private fun updateChips() {
-        val ctx = requireContext()
+        val ctx = activity ?: return
         val current = Prefs.srcLang(ctx)
         chips.forEach { (code, chip) ->
             val on = code == current

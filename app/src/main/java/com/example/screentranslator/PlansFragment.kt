@@ -69,7 +69,7 @@ class PlansFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val ctx = requireContext()
+        val ctx = activity ?: return
         val list = view.findViewById<LinearLayout>(R.id.plansContainer)
         val inflater = LayoutInflater.from(ctx)
 

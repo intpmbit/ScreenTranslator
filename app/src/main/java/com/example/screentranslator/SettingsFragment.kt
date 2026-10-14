@@ -32,7 +32,7 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val ctx = requireContext()
+        val ctx = activity ?: return
         val prefs = Prefs.get(ctx)
 
         optPopup = view.findViewById(R.id.optPopup)
@@ -119,7 +119,8 @@ class SettingsFragment : Fragment() {
     }
 
     private fun refreshMode() {
-        val overlay = Prefs.mode(requireContext()) == Prefs.MODE_OVERLAY
+        val ctx = activity ?: return
+        val overlay = Prefs.mode(ctx) == Prefs.MODE_OVERLAY
         optPopup.setBackgroundResource(if (!overlay) R.drawable.bg_option_on else R.drawable.bg_option_off)
         optOverlay.setBackgroundResource(if (overlay) R.drawable.bg_option_on else R.drawable.bg_option_off)
         optPopupCheck.visibility = if (!overlay) View.VISIBLE else View.INVISIBLE
@@ -127,7 +128,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun refreshOrientation() {
-        val ctx = requireContext()
+        val ctx = activity ?: return
         val vertical = Prefs.orientation(ctx) == Prefs.ORIENT_V
         styleChip(chipHoriz, !vertical)
         styleChip(chipVert, vertical)
@@ -139,18 +140,19 @@ class SettingsFragment : Fragment() {
     }
 
     private fun refreshBg() {
-        val current = Prefs.overlayBg(requireContext())
+        val ctx = activity ?: return
+        val current = Prefs.overlayBg(ctx)
         bgChips.forEachIndexed { i, chip -> styleChip(chip, i == current) }
     }
 
     private fun styleChip(chip: TextView, on: Boolean) {
-        val ctx = requireContext()
+        val ctx = activity ?: return
         chip.setBackgroundResource(if (on) R.drawable.bg_chip_on else R.drawable.bg_chip_off)
         chip.setTextColor(ctx.getColor(if (on) R.color.white else R.color.text_secondary))
     }
 
     private fun renderPreview() {
-        val ctx = requireContext()
+        val ctx = activity ?: return
         val d = resources.displayMetrics.density
         val px = (Prefs.bubbleSize(ctx) * d).toInt()
         previewHolder.removeAllViews()
