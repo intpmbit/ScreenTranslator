@@ -1,0 +1,21 @@
+{
+  "allFiles": [
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/settings.gradle.kts",
+      "selection": {
+        "end": {
+          "column": 15,
+          "index": 335,
+          "line": 17
+        },
+        "start": {
+          "column": 15,
+          "index": 335,
+          "line": 17
+        }
+      }
+    }
+  ],
+  "projectPath": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator",
+  "selectedFile": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/settings.gradle.kts"
+}
