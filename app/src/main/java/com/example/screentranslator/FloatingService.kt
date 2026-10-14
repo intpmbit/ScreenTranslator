@@ -1,16 +1,19 @@
 package com.example.screentranslator
 
+import android.animation.ValueAnimator
 import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.graphics.PixelFormat
-import android.graphics.drawable.GradientDrawable
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.Image
@@ -23,11 +26,13 @@ import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
 import android.util.DisplayMetrics
+import android.view.ContextThemeWrapper
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.LinearLayout
+import android.view.animation.DecelerateInterpolator
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -45,6 +50,7 @@ import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlin.math.abs
+import kotlin.math.min
 
 class FloatingService : Service() {
 
@@ -53,16 +59,31 @@ class FloatingService : Service() {
         const val EXTRA_DATA = "projection_data"
         const val PREFS = "prefs"
         const val KEY_SRC = "src_lang"
+
+        @Volatile
+        var isRunning = false
     }
 
     private lateinit var windowManager: WindowManager
+    private lateinit var inflater: LayoutInflater
     private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var bgThread: HandlerThread
     private lateinit var bgHandler: Handler
 
     private var bubbleView: View? = null
+
+    // عناصر كارت الترجمة
     private var cardView: View? = null
-    private var cardText: TextView? = null
+    private var cStatusRow: View? = null
+    private var cProgress: View? = null
+    private var cStatus: TextView? = null
+    private var cScroll: ScrollView? = null
+    private var cTranslation: TextView? = null
+    private var cCopy: View? = null
+    private var cCopyLabel: TextView? = null
+    private var cLang: TextView? = null
+    private var lastTranslation = ""
+    private var currentLangLabel = ""
 
     private var projection: MediaProjection? = null
     private var projectionCallback: MediaProjection.Callback? = null
@@ -77,11 +98,15 @@ class FloatingService : Service() {
     private var busy = false
     private val translators = HashMap<String, Translator>()
 
+    private val density get() = resources.displayMetrics.density
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        inflater = LayoutInflater.from(ContextThemeWrapper(this, R.style.Theme_ScreenTranslator))
         bgThread = HandlerThread("capture-thread").also { it.start() }
         bgHandler = Handler(bgThread.looper)
         showBubble()
@@ -104,6 +129,7 @@ class FloatingService : Service() {
     }
 
     override fun onDestroy() {
+        isRunning = false
         removeCard()
         bubbleView?.let {
             try { windowManager.removeView(it) } catch (e: Exception) { e.printStackTrace() }
@@ -167,7 +193,7 @@ class FloatingService : Service() {
     }
 
     // ---------------------------------------------------------------
-    // التقاط الشاشة (MediaProjection)
+    // التقاط الشاشة
     // ---------------------------------------------------------------
 
     @Suppress("DEPRECATION")
@@ -220,7 +246,6 @@ class FloatingService : Service() {
         return reader
     }
 
-    /** إذا تغيّر اتجاه الشاشة (طولي/عرضي) نعدّل حجم العرض الافتراضي. */
     private fun syncDisplaySize(): Boolean {
         val (w, h, dpi) = screenSize()
         if (w == readerW && h == readerH) return false
@@ -257,14 +282,18 @@ class FloatingService : Service() {
     }
 
     // ---------------------------------------------------------------
-    // النقر على الفقاعة: التقاط -> OCR -> ترجمة -> عرض
+    // التقاط -> OCR -> ترجمة -> عرض
     // ---------------------------------------------------------------
+
+    private fun setBusy(value: Boolean) {
+        busy = value
+        bubbleView?.alpha = if (value) 0.6f else 1f
+    }
 
     private fun onBubbleClicked() {
         if (busy || projection == null) return
-        busy = true
+        setBusy(true)
 
-        // نخفي الفقاعة والكارت حتى لا يظهرا في الصورة
         removeCard()
         bubbleView?.visibility = View.INVISIBLE
 
@@ -278,10 +307,10 @@ class FloatingService : Service() {
 
         if (bitmap == null) {
             toast("تعذر التقاط الشاشة، حاول مرة أخرى")
-            busy = false
+            setBusy(false)
             return
         }
-        showCard("جارٍ قراءة النص...")
+        showLoading("جارٍ قراءة النص...")
         runOcr(bitmap)
     }
 
@@ -296,9 +325,18 @@ class FloatingService : Service() {
             TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     }
 
+    private fun langName(lang: String) = when (lang) {
+        TranslateLanguage.JAPANESE -> "اليابانية"
+        TranslateLanguage.KOREAN -> "الكورية"
+        TranslateLanguage.CHINESE -> "الصينية"
+        else -> "الإنجليزية"
+    }
+
     private fun runOcr(bitmap: Bitmap) {
         val lang = getSharedPreferences(PREFS, MODE_PRIVATE)
             .getString(KEY_SRC, TranslateLanguage.ENGLISH) ?: TranslateLanguage.ENGLISH
+        currentLangLabel = "${langName(lang)}  ←  العربية"
+        cLang?.text = currentLangLabel
         val recognizer = recognizerFor(lang)
 
         recognizer.process(InputImage.fromBitmap(bitmap, 0))
@@ -314,8 +352,8 @@ class FloatingService : Service() {
                     .take(25)
 
                 if (blocks.isEmpty()) {
-                    showCard("لم يتم العثور على نص في الشاشة.\nتأكد أن لغة النص مطابقة للغة المختارة في التطبيق.")
-                    busy = false
+                    showMessage("لم يتم العثور على نص في الشاشة.\nتأكد أن لغة النص مطابقة للغة المختارة في التطبيق.")
+                    setBusy(false)
                 } else {
                     translateBlocks(lang, blocks)
                 }
@@ -323,13 +361,13 @@ class FloatingService : Service() {
             .addOnFailureListener { e ->
                 bitmap.recycle()
                 recognizer.close()
-                showCard("فشلت قراءة النص: ${e.message}")
-                busy = false
+                showMessage("فشلت قراءة النص: ${e.message}")
+                setBusy(false)
             }
     }
 
     private fun translateBlocks(lang: String, blocks: List<String>) {
-        showCard("جارٍ الترجمة...\n(في أول مرة يتم تحميل نموذج اللغة ويحتاج إنترنت)")
+        showLoading("جارٍ الترجمة...\n(في أول مرة يتم تحميل نموذج اللغة ويحتاج إنترنت)")
 
         val translator = translators.getOrPut(lang) {
             Translation.getClient(
@@ -345,16 +383,17 @@ class FloatingService : Service() {
                 val tasks = blocks.map { translator.translate(it) }
                 Tasks.whenAllComplete(tasks).addOnSuccessListener {
                     val out = tasks.filter { it.isSuccessful }.mapNotNull { it.result }
-                    showCard(
-                        if (out.isEmpty()) "فشلت الترجمة."
-                        else out.joinToString(separator = "\n\n• ", prefix = "• ")
-                    )
-                    busy = false
+                    if (out.isEmpty()) {
+                        showMessage("فشلت الترجمة.")
+                    } else {
+                        showResult(out)
+                    }
+                    setBusy(false)
                 }
             }
             .addOnFailureListener { e ->
-                showCard("فشل تحميل نموذج الترجمة.\nتأكد من الإنترنت (مطلوب أول مرة فقط).\n${e.message}")
-                busy = false
+                showMessage("فشل تحميل نموذج الترجمة.\nتأكد من الإنترنت (مطلوب أول مرة فقط).\n${e.message}")
+                setBusy(false)
             }
     }
 
@@ -362,55 +401,25 @@ class FloatingService : Service() {
     // كارت الترجمة
     // ---------------------------------------------------------------
 
-    private fun showCard(message: String) {
-        if (cardView == null) buildCard()
-        cardText?.text = message
-    }
-
-    private fun buildCard() {
-        val d = resources.displayMetrics.density
+    private fun ensureCard() {
+        if (cardView != null) return
+        val d = density
         val screen = screenSize()
 
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutDirection = View.LAYOUT_DIRECTION_RTL
-            setPadding((16 * d).toInt(), (8 * d).toInt(), (16 * d).toInt(), (16 * d).toInt())
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#EE202124"))
-                cornerRadius = 16 * d
-            }
-        }
+        val root = inflater.inflate(R.layout.dialog_translation, null)
+        cStatusRow = root.findViewById(R.id.statusRow)
+        cProgress = root.findViewById(R.id.progress)
+        cStatus = root.findViewById(R.id.tvStatus)
+        cScroll = root.findViewById(R.id.scroll)
+        cTranslation = root.findViewById(R.id.tvTranslation)
+        cCopy = root.findViewById(R.id.btnCopy)
+        cCopyLabel = root.findViewById(R.id.btnCopyLabel)
+        cLang = root.findViewById(R.id.tvLangChip)
+        cLang?.text = currentLangLabel
 
-        val close = TextView(this).apply {
-            text = "✕  إغلاق"
-            textSize = 16f
-            setTextColor(Color.parseColor("#FF8A80"))
-            setPadding(0, (8 * d).toInt(), (8 * d).toInt(), (8 * d).toInt())
-            setOnClickListener { removeCard() }
-        }
-
-        val tv = TextView(this).apply {
-            textSize = 18f
-            setTextColor(Color.WHITE)
-            textDirection = View.TEXT_DIRECTION_RTL
-            setLineSpacing(0f, 1.2f)
-        }
-        val scroll = ScrollView(this).apply { addView(tv) }
-
-        root.addView(
-            close,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-        root.addView(
-            scroll,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                (screen[1] * 0.3).toInt()
-            )
-        )
+        root.findViewById<View>(R.id.ivCloseTop).setOnClickListener { removeCard() }
+        root.findViewById<View>(R.id.btnClose).setOnClickListener { removeCard() }
+        cCopy?.setOnClickListener { copyTranslation() }
 
         val params = WindowManager.LayoutParams(
             screen[0] - (24 * d).toInt(),
@@ -420,12 +429,72 @@ class FloatingService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            y = (24 * d).toInt()
+            y = (28 * d).toInt()
         }
 
         windowManager.addView(root, params)
         cardView = root
-        cardText = tv
+
+        root.alpha = 0f
+        root.translationY = 40 * d
+        root.animate().alpha(1f).translationY(0f).setDuration(220)
+            .setInterpolator(DecelerateInterpolator()).start()
+    }
+
+    private fun showLoading(message: String) {
+        ensureCard()
+        cStatusRow?.visibility = View.VISIBLE
+        cProgress?.visibility = View.VISIBLE
+        cStatus?.text = message
+        cScroll?.visibility = View.GONE
+        cCopy?.visibility = View.GONE
+    }
+
+    private fun showMessage(message: String) {
+        ensureCard()
+        cStatusRow?.visibility = View.VISIBLE
+        cProgress?.visibility = View.GONE
+        cStatus?.text = message
+        cScroll?.visibility = View.GONE
+        cCopy?.visibility = View.GONE
+    }
+
+    private fun showResult(items: List<String>) {
+        ensureCard()
+        lastTranslation = items.joinToString("\n\n")
+        val shown = items.joinToString(separator = "\n\n• ", prefix = "• ")
+
+        cStatusRow?.visibility = View.GONE
+        cTranslation?.text = shown
+        cScroll?.visibility = View.VISIBLE
+        cCopy?.visibility = View.VISIBLE
+        cCopyLabel?.text = "نسخ الترجمة"
+        fitScroll()
+    }
+
+    /** يضبط ارتفاع منطقة النص: بقدر المحتوى وبحد أقصى 35% من الشاشة. */
+    private fun fitScroll() {
+        val tv = cTranslation ?: return
+        val scroll = cScroll ?: return
+        val d = density
+        val screen = screenSize()
+        val textWidth = screen[0] - (24 * d).toInt() - (40 * d).toInt()
+        tv.measure(
+            View.MeasureSpec.makeMeasureSpec(textWidth, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val maxH = (screen[1] * 0.35).toInt()
+        val lp = scroll.layoutParams
+        lp.height = min(tv.measuredHeight, maxH)
+        scroll.layoutParams = lp
+    }
+
+    private fun copyTranslation() {
+        if (lastTranslation.isEmpty()) return
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("translation", lastTranslation))
+        cCopyLabel?.text = "تم النسخ ✓"
+        mainHandler.postDelayed({ cCopyLabel?.text = "نسخ الترجمة" }, 1500)
     }
 
     private fun removeCard() {
@@ -433,7 +502,14 @@ class FloatingService : Service() {
             try { windowManager.removeView(it) } catch (e: Exception) { e.printStackTrace() }
         }
         cardView = null
-        cardText = null
+        cStatusRow = null
+        cProgress = null
+        cStatus = null
+        cScroll = null
+        cTranslation = null
+        cCopy = null
+        cCopyLabel = null
+        cLang = null
     }
 
     // ---------------------------------------------------------------
@@ -441,20 +517,9 @@ class FloatingService : Service() {
     // ---------------------------------------------------------------
 
     private fun showBubble() {
-        val density = resources.displayMetrics.density
-        val size = (56 * density).toInt()
-
-        val bubble = TextView(this).apply {
-            text = "文"
-            textSize = 22f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#CC1E88E5"))
-                setStroke((2 * density).toInt(), Color.WHITE)
-            }
-        }
+        val d = density
+        val size = (64 * d).toInt()
+        val bubble = inflater.inflate(R.layout.floating_bubble, null)
 
         val params = WindowManager.LayoutParams(
             size,
@@ -465,17 +530,17 @@ class FloatingService : Service() {
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = 0
-            y = (200 * density).toInt()
+            y = (200 * d).toInt()
         }
 
-        val touchSlop = 10 * density
+        val touchSlop = 10 * d
         var startX = 0
         var startY = 0
         var touchStartX = 0f
         var touchStartY = 0f
         var moved = false
 
-        bubble.setOnTouchListener { view, event ->
+        bubble.setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     startX = params.x
@@ -483,6 +548,9 @@ class FloatingService : Service() {
                     touchStartX = event.rawX
                     touchStartY = event.rawY
                     moved = false
+                    v.foreground?.setHotspot(event.x, event.y)
+                    v.isPressed = true
+                    v.animate().scaleX(0.9f).scaleY(0.9f).setDuration(100).start()
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -492,12 +560,19 @@ class FloatingService : Service() {
                     if (moved) {
                         params.x = startX + dx.toInt()
                         params.y = startY + dy.toInt()
-                        windowManager.updateViewLayout(view, params)
+                        windowManager.updateViewLayout(v, params)
                     }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!moved) onBubbleClicked()
+                    v.isPressed = false
+                    v.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+                    if (!moved) onBubbleClicked() else snapToEdge(v, params)
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    v.isPressed = false
+                    v.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
                     true
                 }
                 else -> false
@@ -506,6 +581,21 @@ class FloatingService : Service() {
 
         windowManager.addView(bubble, params)
         bubbleView = bubble
+    }
+
+    /** بعد السحب تلتصق الفقاعة بأقرب حافة جانبية. */
+    private fun snapToEdge(view: View, params: WindowManager.LayoutParams) {
+        val sw = screenSize()[0]
+        val target = if (params.x + view.width / 2 < sw / 2) 0 else sw - view.width
+        ValueAnimator.ofInt(params.x, target).apply {
+            duration = 220
+            interpolator = DecelerateInterpolator()
+            addUpdateListener {
+                params.x = it.animatedValue as Int
+                try { windowManager.updateViewLayout(view, params) } catch (e: Exception) { cancel() }
+            }
+            start()
+        }
     }
 
     private fun toast(msg: String) {

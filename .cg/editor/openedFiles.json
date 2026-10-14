@@ -80,13 +80,13 @@
       "selection": {
         "end": {
           "column": 1,
-          "index": 3330,
-          "line": 111
+          "index": 5163,
+          "line": 155
         },
         "start": {
           "column": 1,
-          "index": 3330,
-          "line": 111
+          "index": 5163,
+          "line": 155
         }
       }
     },
@@ -94,14 +94,14 @@
       "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/java/com/example/screentranslator/FloatingService.kt",
       "selection": {
         "end": {
-          "column": 0,
-          "index": 4793,
-          "line": 152
+          "column": 1,
+          "index": 17980,
+          "line": 513
         },
         "start": {
-          "column": 0,
-          "index": 4793,
-          "line": 152
+          "column": 1,
+          "index": 17980,
+          "line": 513
         }
       }
     },
@@ -119,8 +119,413 @@
           "line": 0
         }
       }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/.gitignore",
+      "selection": {
+        "end": {
+          "column": 0,
+          "index": 0,
+          "line": 0
+        },
+        "start": {
+          "column": 0,
+          "index": 0,
+          "line": 0
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/values-night/themes.xml",
+      "selection": {
+        "end": {
+          "column": 0,
+          "index": 0,
+          "line": 0
+        },
+        "start": {
+          "column": 0,
+          "index": 0,
+          "line": 0
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/values/colors.xml",
+      "selection": {
+        "end": {
+          "column": 12,
+          "index": 781,
+          "line": 22
+        },
+        "start": {
+          "column": 12,
+          "index": 781,
+          "line": 22
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/ic_translate.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 566,
+          "line": 5
+        },
+        "start": {
+          "column": 9,
+          "index": 566,
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/ic_play.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 259,
+          "line": 4
+        },
+        "start": {
+          "column": 9,
+          "index": 259,
+          "line": 4
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/ic_stop.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 258,
+          "line": 4
+        },
+        "start": {
+          "column": 9,
+          "index": 258,
+          "line": 4
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/ic_close.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 354,
+          "line": 5
+        },
+        "start": {
+          "column": 9,
+          "index": 354,
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/ic_copy.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 399,
+          "line": 5
+        },
+        "start": {
+          "column": 9,
+          "index": 399,
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/ic_check.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 303,
+          "line": 5
+        },
+        "start": {
+          "column": 9,
+          "index": 303,
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/ic_shield.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 321,
+          "line": 5
+        },
+        "start": {
+          "column": 9,
+          "index": 321,
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_card.xml",
+      "selection": {
+        "end": {
+          "column": 8,
+          "index": 274,
+          "line": 5
+        },
+        "start": {
+          "column": 8,
+          "index": 274,
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_status_active.xml",
+      "selection": {
+        "end": {
+          "column": 8,
+          "index": 276,
+          "line": 5
+        },
+        "start": {
+          "column": 8,
+          "index": 276,
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_status_inactive.xml",
+      "selection": {
+        "end": {
+          "column": 8,
+          "index": 272,
+          "line": 5
+        },
+        "start": {
+          "column": 8,
+          "index": 272,
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_status_warning.xml",
+      "selection": {
+        "end": {
+          "column": 8,
+          "index": 276,
+          "line": 5
+        },
+        "start": {
+          "column": 8,
+          "index": 276,
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_dot.xml",
+      "selection": {
+        "end": {
+          "column": 8,
+          "index": 172,
+          "line": 3
+        },
+        "start": {
+          "column": 8,
+          "index": 172,
+          "line": 3
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_icon_circle.xml",
+      "selection": {
+        "end": {
+          "column": 8,
+          "index": 234,
+          "line": 4
+        },
+        "start": {
+          "column": 8,
+          "index": 234,
+          "line": 4
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/ripple_circle.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 298,
+          "line": 8
+        },
+        "start": {
+          "column": 9,
+          "index": 298,
+          "line": 8
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_btn_primary.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 671,
+          "line": 18
+        },
+        "start": {
+          "column": 9,
+          "index": 671,
+          "line": 18
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_btn_outline.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 586,
+          "line": 16
+        },
+        "start": {
+          "column": 9,
+          "index": 586,
+          "line": 16
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_btn_danger.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 590,
+          "line": 16
+        },
+        "start": {
+          "column": 9,
+          "index": 590,
+          "line": 16
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_chip_on.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 586,
+          "line": 16
+        },
+        "start": {
+          "column": 9,
+          "index": 586,
+          "line": 16
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_chip_off.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 586,
+          "line": 16
+        },
+        "start": {
+          "column": 9,
+          "index": 586,
+          "line": 16
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_dialog.xml",
+      "selection": {
+        "end": {
+          "column": 8,
+          "index": 274,
+          "line": 5
+        },
+        "start": {
+          "column": 8,
+          "index": 274,
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/bg_bubble.xml",
+      "selection": {
+        "end": {
+          "column": 13,
+          "index": 605,
+          "line": 15
+        },
+        "start": {
+          "column": 13,
+          "index": 605,
+          "line": 15
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/drawable/ripple_bubble.xml",
+      "selection": {
+        "end": {
+          "column": 9,
+          "index": 363,
+          "line": 10
+        },
+        "start": {
+          "column": 9,
+          "index": 363,
+          "line": 10
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/layout/floating_bubble.xml",
+      "selection": {
+        "end": {
+          "column": 14,
+          "index": 580,
+          "line": 15
+        },
+        "start": {
+          "column": 14,
+          "index": 580,
+          "line": 15
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/layout/dialog_translation.xml",
+      "selection": {
+        "end": {
+          "column": 15,
+          "index": 6396,
+          "line": 179
+        },
+        "start": {
+          "column": 15,
+          "index": 6396,
+          "line": 179
+        }
+      }
     }
   ],
   "projectPath": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator",
-  "selectedFile": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/AndroidManifest.xml"
+  "selectedFile": "/storage/emulated/0/CodeOnTheGoProjects/ScreenTranslator/app/src/main/res/layout/dialog_translation.xml"
 }
