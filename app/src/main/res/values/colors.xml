@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="bg_deep">#0F172A</color>
+    <color name="nav_bg">#111C30</color>
     <color name="surface">#1E293B</color>
     <color name="surface_raised">#243247</color>
     <color name="border">#334155</color>
+    <color name="divider">#2B3B55</color>
 
     <color name="primary">#0EA5E9</color>
     <color name="primary_dark">#0284C7</color>
