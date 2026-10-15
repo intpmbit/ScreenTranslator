@@ -49,7 +49,6 @@ import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
-import com.google.mlkit.vision.text.TextRecognizerOptions
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -109,7 +108,7 @@ class FloatingService : Service() {
     private var panelView: View? = null
     private var panelPauseBtn: View? = null
     private var panelPauseLabel: TextView? = null
-    private var panelHideBtn: View? = null
+    private var panelHideBtn: TextView? = null
     private var panelStopBtn: View? = null
     private var panelTranslateBtn: View? = null
 
@@ -491,7 +490,7 @@ class FloatingService : Service() {
         TranslateLanguage.CHINESE ->
             TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
         else ->
-            TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            TextRecognition.getClient()
     }
 
     private fun langName(lang: String) = when (lang) {
