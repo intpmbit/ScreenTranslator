@@ -49,6 +49,7 @@ import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
+import com.google.mlkit.vision.text.TextRecognizerOptions
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -490,7 +491,7 @@ class FloatingService : Service() {
         TranslateLanguage.CHINESE ->
             TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
         else ->
-            TextRecognition.getClient()
+            TextRecognition.getClient(TextRecognizerOptions.Builder().build())
     }
 
     private fun langName(lang: String) = when (lang) {
