@@ -491,7 +491,7 @@ class FloatingService : Service() {
         TranslateLanguage.CHINESE ->
             TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
         else ->
-            TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            TextRecognition.getClient(TextRecognizerOptions.Builder().build())
     }
 
     private fun langName(lang: String) = when (lang) {
