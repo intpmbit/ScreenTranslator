@@ -5,6 +5,7 @@ import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -48,7 +49,7 @@ import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.google.mlkit.vision.text.TextRecognizerOptions
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -64,15 +65,34 @@ class FloatingService : Service() {
         var isRunning = false
     }
 
+    // -------------------------------------------------------------------
+    // الحالة
+    // -------------------------------------------------------------------
+    /** هل الترجمة موقوفة مؤقتاً (الخدمة تعمل지만 لا تُترجم). */
+    var isPaused = false
+        private set
+
+    /** هل الفقاعة مخفية (المستخدم أخفاها، الخدمة ما زالت تعمل). */
+    var isBubbleHidden = false
+        private set
+
+    /** هل لوحة التحكم ظاهرة. */
+    var isPanelVisible = false
+        private set
+
+    // -------------------------------------------------------------------
+    // نوافذ النظام
+    // -------------------------------------------------------------------
     private lateinit var windowManager: WindowManager
     private lateinit var inflater: LayoutInflater
     private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var bgThread: HandlerThread
     private lateinit var bgHandler: Handler
 
+    // الفقاعة
     private var bubbleView: View? = null
 
-    // عناصر كارت الترجمة
+    // بطاقة الترجمة (الناتج)
     private var cardView: View? = null
     private var cStatusRow: View? = null
     private var cProgress: View? = null
@@ -85,6 +105,15 @@ class FloatingService : Service() {
     private var lastTranslation = ""
     private var currentLangLabel = ""
 
+    // لوحة التحكم العائمة
+    private var panelView: View? = null
+    private var panelPauseBtn: View? = null
+    private var panelPauseLabel: TextView? = null
+    private var panelHideBtn: View? = null
+    private var panelStopBtn: View? = null
+    private var panelTranslateBtn: View? = null
+
+    // التقاط الشاشة
     private var projection: MediaProjection? = null
     private var projectionCallback: MediaProjection.Callback? = null
     private var virtualDisplay: VirtualDisplay? = null
@@ -100,6 +129,10 @@ class FloatingService : Service() {
 
     private val density get() = resources.displayMetrics.density
 
+    // -------------------------------------------------------------------
+    // دورة حياة الخدمة
+    // -------------------------------------------------------------------
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -110,10 +143,36 @@ class FloatingService : Service() {
         bgThread = HandlerThread("capture-thread").also { it.start() }
         bgHandler = Handler(bgThread.looper)
         showBubble()
+        updateNotification()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startAsForeground()
+
+        // معالجة الإجراءات الواردة من الإشعارات / لوحة التحكم
+        val action = intent?.action
+        when (action) {
+            NotificationActionReceiver.ACTION_STOP -> {
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            NotificationActionReceiver.ACTION_PAUSE -> {
+                setPaused(true)
+                updateNotification()
+                return START_NOT_STICKY
+            }
+            NotificationActionReceiver.ACTION_RESUME -> {
+                setPaused(false)
+                updateNotification()
+                return START_NOT_STICKY
+            }
+            NotificationActionReceiver.ACTION_TRANSLATE -> {
+                if (!isPaused && projection != null) {
+                    onBubbleClicked()
+                }
+                return START_NOT_STICKY
+            }
+        }
 
         if (projection == null) {
             val code = intent?.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
@@ -130,7 +189,12 @@ class FloatingService : Service() {
 
     override fun onDestroy() {
         isRunning = false
+        isPaused = false
+        isBubbleHidden = false
+        isPanelVisible = false
+
         removeCard()
+        removePanel()
         bubbleView?.let {
             try { windowManager.removeView(it) } catch (e: Exception) { e.printStackTrace() }
         }
@@ -149,26 +213,54 @@ class FloatingService : Service() {
         translators.values.forEach { it.close() }
         translators.clear()
         bgThread.quitSafely()
+
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancel(1)
         super.onDestroy()
     }
 
-    // ---------------------------------------------------------------
-    // Foreground
-    // ---------------------------------------------------------------
+    // -------------------------------------------------------------------
+    // الواجهة الأمامية والإشعارات
+    // -------------------------------------------------------------------
 
     private fun startAsForeground() {
         val channelId = "floating_bubble_channel"
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(
-            NotificationChannel(channelId, "الفقاعة العائمة", NotificationManager.IMPORTANCE_LOW)
+            NotificationChannel(channelId, "مترجم الشاشة", NotificationManager.IMPORTANCE_LOW)
         )
 
-        val notification = Notification.Builder(this, channelId)
-            .setContentTitle("مترجم الشاشة يعمل")
-            .setContentText("اضغط على الفقاعة لترجمة الشاشة")
+        val pauseAction = PendingIntent.getService(
+            this, 101,
+            Intent(this, FloatingService::class.java).setAction(NotificationActionReceiver.ACTION_PAUSE),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val resumeAction = PendingIntent.getService(
+            this, 102,
+            Intent(this, FloatingService::class.java).setAction(NotificationActionReceiver.ACTION_RESUME),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val stopAction = PendingIntent.getService(
+            this, 103,
+            Intent(this, FloatingService::class.java).setAction(NotificationActionReceiver.ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val translateAction = PendingIntent.getService(
+            this, 104,
+            Intent(this, FloatingService::class.java).setAction(NotificationActionReceiver.ACTION_TRANSLATE),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = Notification.Builder(this, channelId)
+            .setContentTitle("مترجم الشاشة")
+            .setContentText(if (isPaused) "موقوف مؤقتاً" else "يعمل في الخلفية")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
-            .build()
+            .addAction(android.R.drawable.ic_media_pause, if (isPaused) "استئناف" else "إيقاف مؤقت", pauseAction)
+            .addAction(android.R.drawable.ic_media_play, "ترجمة الآن", translateAction)
+            .addAction(android.R.drawable.ic_delete, "إيقاف الترجمة", stopAction)
+
+        val notification = builder.build()
 
         when {
             Build.VERSION.SDK_INT >= 34 -> startForeground(
@@ -183,6 +275,48 @@ class FloatingService : Service() {
         }
     }
 
+    /** تحديث نص الإشعارات حسب الحالة الحالية. */
+    private fun updateNotification() {
+        if (!isRunning) return
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "floating_bubble_channel"
+        manager.createNotificationChannel(
+            NotificationChannel(channelId, "مترجم الشاشة", NotificationManager.IMPORTANCE_LOW)
+        )
+
+        val pauseAction = PendingIntent.getService(
+            this, 101,
+            Intent(this, FloatingService::class.java).setAction(NotificationActionReceiver.ACTION_PAUSE),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val resumeAction = PendingIntent.getService(
+            this, 102,
+            Intent(this, FloatingService::class.java).setAction(NotificationActionReceiver.ACTION_RESUME),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val stopAction = PendingIntent.getService(
+            this, 103,
+            Intent(this, FloatingService::class.java).setAction(NotificationActionReceiver.ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val translateAction = PendingIntent.getService(
+            this, 104,
+            Intent(this, FloatingService::class.java).setAction(NotificationActionReceiver.ACTION_TRANSLATE),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = Notification.Builder(this, channelId)
+            .setContentTitle("مترجم الشاشة")
+            .setContentText(if (isPaused) "موقوف مؤقتاً" else "يعمل في الخلفية")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setOngoing(true)
+            .addAction(android.R.drawable.ic_media_pause, if (isPaused) "استئناف" else "إيقاف مؤقت", pauseAction)
+            .addAction(android.R.drawable.ic_media_play, "ترجمة الآن", translateAction)
+            .addAction(android.R.drawable.ic_delete, "إيقاف الترجمة", stopAction)
+
+        manager.notify(1, builder.build())
+    }
+
     @Suppress("DEPRECATION")
     private fun getProjectionData(intent: Intent): Intent? {
         return if (Build.VERSION.SDK_INT >= 33) {
@@ -192,9 +326,34 @@ class FloatingService : Service() {
         }
     }
 
-    // ---------------------------------------------------------------
+    // -------------------------------------------------------------------
+    // التحكم في الإيقاف المؤقت / الاستئناف / الإخفاء
+    // -------------------------------------------------------------------
+
+    private fun setPaused(paused: Boolean) {
+        isPaused = paused
+        panelPauseLabel?.text = if (paused) "استئناف" else "إيقاف مؤقت"
+        panelPauseBtn?.setBackgroundResource(
+            if (paused) R.drawable.bg_btn_primary else R.drawable.bg_btn_outline
+        )
+        updateNotification()
+    }
+
+    private fun togglePause() {
+        setPaused(!isPaused)
+    }
+
+    /** إظهار / إخفاء الفقاعة فقط (البقاء في الخدمة). */
+    private fun toggleBubbleVisibility() {
+        isBubbleHidden = !isBubbleHidden
+        bubbleView?.visibility = if (isBubbleHidden) View.GONE else View.VISIBLE
+        panelHideBtn?.setText(if (isBubbleHidden) "إظهار الفقاعة" else "إخفاء الفقاعة")
+        removePanel()
+    }
+
+    // -------------------------------------------------------------------
     // التقاط الشاشة
-    // ---------------------------------------------------------------
+    // -------------------------------------------------------------------
 
     @Suppress("DEPRECATION")
     private fun screenSize(): IntArray {
@@ -281,20 +440,30 @@ class FloatingService : Service() {
         try { heldImage?.toBitmapCopy() } catch (e: Exception) { null }
     }
 
-    // ---------------------------------------------------------------
-    // التقاط -> OCR -> ترجمة -> عرض
-    // ---------------------------------------------------------------
+    // -------------------------------------------------------------------
+    // خط المعالجة: التقاط → OCR → ترجمة → عرض
+    // -------------------------------------------------------------------
 
     private fun setBusy(value: Boolean) {
         busy = value
         bubbleView?.alpha = if (value) 0.6f else 1f
     }
 
+    /** النقر على الفقاعة يفتح لوحة التحكم بدلاً من الترجمة المباشرة. */
     private fun onBubbleClicked() {
         if (busy || projection == null) return
-        setBusy(true)
+        if (isPanelVisible) {
+            removePanel()
+        } else {
+            showPanel()
+        }
+    }
 
-        removeCard()
+    /** الترجمة الفورية من لوحة التحكم / الإشعار. */
+    private fun translateNow() {
+        if (busy || isPaused || projection == null) return
+        removePanel()
+        setBusy(true)
         bubbleView?.visibility = View.INVISIBLE
 
         val resized = syncDisplaySize()
@@ -397,9 +566,9 @@ class FloatingService : Service() {
             }
     }
 
-    // ---------------------------------------------------------------
-    // كارت الترجمة
-    // ---------------------------------------------------------------
+    // -------------------------------------------------------------------
+    // بطاقة الترجمة
+    // -------------------------------------------------------------------
 
     private fun ensureCard() {
         if (cardView != null) return
@@ -472,7 +641,6 @@ class FloatingService : Service() {
         fitScroll()
     }
 
-    /** يضبط ارتفاع منطقة النص: بقدر المحتوى وبحد أقصى 35% من الشاشة. */
     private fun fitScroll() {
         val tv = cTranslation ?: return
         val scroll = cScroll ?: return
@@ -512,9 +680,74 @@ class FloatingService : Service() {
         cLang = null
     }
 
-    // ---------------------------------------------------------------
+    // -------------------------------------------------------------------
+    // لوحة التحكم العائمة
+    // -------------------------------------------------------------------
+
+    private fun showPanel() {
+        if (isPanelVisible) return
+        val d = density
+        val screen = screenSize()
+
+        val root = inflater.inflate(R.layout.control_panel, null)
+        panelPauseBtn = root.findViewById(R.id.btnPause)
+        panelPauseLabel = root.findViewById(R.id.tvPauseLabel)
+        panelHideBtn = root.findViewById(R.id.btnHide)
+        panelStopBtn = root.findViewById(R.id.btnStop)
+        panelTranslateBtn = root.findViewById(R.id.btnTranslate)
+
+        panelPauseLabel?.text = if (isPaused) "استئناف" else "إيقاف مؤقت"
+        panelPauseBtn?.setBackgroundResource(
+            if (isPaused) R.drawable.bg_btn_primary else R.drawable.bg_btn_outline
+        )
+        panelHideBtn?.setText(if (isBubbleHidden) "إظهار الفقاعة" else "إخفاء الفقاعة")
+
+        panelPauseBtn?.setOnClickListener { togglePause() }
+        panelHideBtn?.setOnClickListener { toggleBubbleVisibility() }
+        panelStopBtn?.setOnClickListener { stopSelf() }
+        panelTranslateBtn?.setOnClickListener { translateNow() }
+
+        // إغلاق اللوحة بالنقر خارجها
+        root.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                removePanel()
+                true
+            } else false
+        }
+
+        val params = WindowManager.LayoutParams(
+            (260 * d).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            x = (16 * d).toInt()
+            y = (100 * d).toInt()
+        }
+
+        windowManager.addView(root, params)
+        panelView = root
+        isPanelVisible = true
+    }
+
+    private fun removePanel() {
+        panelView?.let {
+            try { windowManager.removeView(it) } catch (e: Exception) { e.printStackTrace() }
+        }
+        panelView = null
+        panelPauseBtn = null
+        panelPauseLabel = null
+        panelHideBtn = null
+        panelStopBtn = null
+        panelTranslateBtn = null
+        isPanelVisible = false
+    }
+
+    // -------------------------------------------------------------------
     // الفقاعة
-    // ---------------------------------------------------------------
+    // -------------------------------------------------------------------
 
     private fun showBubble() {
         val d = density
@@ -581,6 +814,7 @@ class FloatingService : Service() {
 
         windowManager.addView(bubble, params)
         bubbleView = bubble
+        bubbleView?.visibility = if (isBubbleHidden) View.GONE else View.VISIBLE
     }
 
     /** بعد السحب تلتصق الفقاعة بأقرب حافة جانبية. */

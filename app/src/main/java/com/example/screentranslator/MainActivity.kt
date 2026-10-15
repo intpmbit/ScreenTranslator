@@ -122,6 +122,8 @@ class MainActivity : Activity() {
                     putExtra(FloatingService.EXTRA_DATA, data)
                 }
                 startForegroundService(intent)
+                // اخفاء النشاط عن الواجهة مع بقاء التطبيق متاحاً عند إعادة فتحه
+                moveTaskToBack(true)
             } else {
                 Toast.makeText(this, "لم يتم منح إذن تسجيل الشاشة", Toast.LENGTH_LONG).show()
             }

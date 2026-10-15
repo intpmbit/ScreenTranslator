@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -7,17 +8,21 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"
         android:icon="@android:drawable/ic_dialog_info"
         android:label="مترجم الشاشة"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ScreenTranslator">
+        android:theme="@style/Theme.ScreenTranslator"
+        tools:targetApi="34">
 
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|screenLayout|density|keyboardHidden|keyboard|uiMode|smallestScreenSize|layoutDirection">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -27,11 +32,23 @@
         <service
             android:name=".FloatingService"
             android:exported="false"
-            android:foregroundServiceType="specialUse|mediaProjection">
+            android:foregroundServiceType="specialUse|mediaProjection"
+            android:enabled="true">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="floating_overlay_bubble" />
         </service>
+
+        <receiver
+            android:name=".NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.screentranslator.ACTION_STOP" />
+                <action android:name="com.example.screentranslator.ACTION_PAUSE" />
+                <action android:name="com.example.screentranslator.ACTION_RESUME" />
+                <action android:name="com.example.screentranslator.ACTION_TRANSLATE" />
+            </intent-filter>
+        </receiver>
 
     </application>
 </manifest>
